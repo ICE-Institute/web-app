@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>blockcerts-verifier</title>
+    <script src="node_modules/@blockcerts/blockcerts-verifier/dist/main.js"></script>
+    <script src="node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+    <script>
+            function dateFromIso (isoDate){
+                const diso = Date.parse(isoDate);
+                if (diso) {
+                    return new Date(diso);
+                }
+            }
+            function dateToUnixTimestamp (date){
+                if (date === '') {
+                    return 0;
+                }
+
+                return dateFromIso(`${date}`).getTime();
+            }
+
+            function startsWith (stringContent, pattern){
+                if (typeof stringContent !== 'string') {
+                    console.warn('Trying to test a non string variable');
+                    return false;
+                }
+                return stringContent.indexOf(pattern) === 0;
+            }
+            function stripHashPrefix (remoteHash, prefixes) {
+                for (let i = 0; i < prefixes.length; i++) {
+                    const prefix = prefixes[i];
+                    if (startsWith(remoteHash, prefix)) {
+                        return remoteHash.slice(prefix.length);
+                    }
+                }
+                return remoteHash;
+            }
+
+         const explorerAPI = {
+            //serviceName: 'etherscan',
+            //key:'',
+            //keyPropertyName:'',
+            serviceURL:'https://127.0.0.1:5000/api/v1/viewer/{transaction_id}',
+            chainType:'eth',
+            //serviceURL: 'https://insight.bitpay.com/api/tx/{transaction_id}'
+            priority: 0, // 0 means the custom API will be ran before the public APIs listed, 1 after, -1 is reserved for default explorers
+            parsingFunction: (jsonResponse)=>{
+                //alert(JSON.stringify(jsonResponse));
+
+                const time =  dateToUnixTimestamp(jsonResponse.jsonResponse.timestamp);
+                //alert(time);
+
+
+                const issuingAddress= jsonResponse.jsonResponse.from;
+                //alert(issuingAddress);
+
+                let input = jsonResponse.jsonResponse.inputBytes;
+                //const remoteHash = input;
+                const remoteHash=stripHashPrefix(input,['0x']);
+                //alert(remoteHash);
+
+                return {
+                    remoteHash,
+                    issuingAddress,
+                    time,
+                    revokedAddresses:[]
+                };
+            }
+        };
+          document.addEventListener('DOMContentLoaded', function () {
+            const verifierElement = document.querySelectorAll('blockcerts-verifier')[0];
+            verifierElement.explorerAPIs = [explorerAPI];
+
+        });
+    </script>
+    <style>
+            .main {
+                max-width: 700px;
+                margin: 0 auto;
+                width: 100%;
+            }
+    </style>
+  </head>
+  <body>
+    <!--
+        Visit demo/index.html to see live examples of your element running.
+        This page will automatically redirect you there when run in the browser
+        with `polymer serve`.
+      -->
+      <div class="main">
+            <h3>Basic blockcerts-verifier demo - Explorer API</h3>
+            <blockcerts-verifier allow-download display-mode="full" theme='dark'></blockcerts-verifier>
+        </div>
+
+  </body>
+</html>
